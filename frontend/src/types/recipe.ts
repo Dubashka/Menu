@@ -39,7 +39,7 @@ export interface RecipeFormValues {
   title: string;
   description: string;
   imageUrl: string;
-  category: string;
+  category: string[];
   cookingTime: number;
   baseWeight: number;
   caloriesPer100: number;

@@ -1,10 +1,23 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Plus, Trash2 } from 'lucide-react';
+import { useRef, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Button } from '../common/Button';
 import { TextAreaField, TextField } from './Field';
 import { RecipeFormValues } from '../../types/recipe';
+
+const CATEGORIES = [
+  'Сладкое',
+  'Суп',
+  'Салат',
+  'Горячее',
+  'Закуски',
+  'Завтрак',
+  'Обед',
+  'Ужин',
+  'Перекус'
+] as const;
 
 const ingredientSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
@@ -17,16 +30,16 @@ const ingredientSchema = z.object({
 
 const recipeSchema = z.object({
   title: z.string().min(1, 'Введите название'),
-  description: z.string().min(1, 'Введите описание'),
-  imageUrl: z.string().url('Введите корректный URL').or(z.literal('')),
-  category: z.string().min(1, 'Выберите категорию'),
+  description: z.string().optional().default(''),
+  imageUrl: z.string().url('Введите корректный URL').or(z.literal('')).optional().default(''),
+  category: z.array(z.string()).min(1, 'Выберите хотя бы одну категорию'),
   cookingTime: z.coerce.number().min(1, 'Минимум 1 минута'),
   baseWeight: z.coerce.number().min(1, 'Минимум 1 грамм'),
   caloriesPer100: z.coerce.number().min(0),
   proteinPer100: z.coerce.number().min(0),
   fatPer100: z.coerce.number().min(0),
   carbsPer100: z.coerce.number().min(0),
-  steps: z.array(z.object({ value: z.string().min(1, 'Шаг не может быть пустым') })).min(1, 'Добавьте хотя бы один шаг'),
+  steps: z.array(z.object({ value: z.string() })).optional().default([]),
   ingredients: z.array(ingredientSchema).min(1, 'Добавьте хотя бы один ингредиент')
 });
 
@@ -34,14 +47,14 @@ const defaultValues: RecipeFormValues = {
   title: '',
   description: '',
   imageUrl: '',
-  category: 'Обед',
+  category: [],
   cookingTime: 30,
   baseWeight: 1000,
   caloriesPer100: 0,
   proteinPer100: 0,
   fatPer100: 0,
   carbsPer100: 0,
-  steps: [{ value: '' }],
+  steps: [],
   ingredients: [{ name: '', weight: 0, calories: 0, protein: 0, fat: 0, carbs: 0 }]
 };
 
@@ -50,16 +63,96 @@ interface Props {
   isSubmitting: boolean;
 }
 
+function CategoryMultiSelect({
+  value,
+  onChange,
+  error
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  error?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const toggle = (cat: string) => {
+    if (value.includes(cat)) {
+      onChange(value.filter((c) => c !== cat));
+    } else {
+      onChange([...value, cat]);
+    }
+  };
+
+  const label =
+    value.length === 0
+      ? 'Выберите категории...'
+      : value.join(', ');
+
+  return (
+    <div className="flex flex-col gap-1" ref={containerRef}>
+      <label className="text-sm font-medium text-stone-700 dark:text-stone-300">Категория</label>
+      <div className="relative">
+        <button
+          type="button"
+          className="input-base flex w-full items-center justify-between text-left"
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span className={value.length === 0 ? 'text-stone-400' : ''}>{label}</span>
+          <ChevronDown
+            size={16}
+            className={`shrink-0 text-stone-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          />
+        </button>
+
+        {open && (
+          <div
+            className="absolute z-50 mt-1 w-full rounded-2xl border border-stone-200 bg-white py-1 shadow-md dark:border-stone-700 dark:bg-stone-900"
+            role="listbox"
+            aria-multiselectable="true"
+          >
+            {CATEGORIES.map((cat) => {
+              const checked = value.includes(cat);
+              return (
+                <label
+                  key={cat}
+                  className="flex cursor-pointer items-center gap-3 px-4 py-2 text-sm hover:bg-stone-100 dark:hover:bg-stone-800"
+                  role="option"
+                  aria-selected={checked}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded accent-current"
+                    checked={checked}
+                    onChange={() => toggle(cat)}
+                  />
+                  {cat}
+                </label>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+    </div>
+  );
+}
+
 export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
   const {
     register,
     control,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors }
   } = useForm<RecipeFormValues>({
     resolver: zodResolver(recipeSchema),
     defaultValues
   });
+
+  const selectedCategories = watch('category');
 
   const ingredientsFieldArray = useFieldArray({ control, name: 'ingredients' });
   const stepsFieldArray = useFieldArray({ control, name: 'steps' });
@@ -68,12 +161,26 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
     <form className="space-y-8" onSubmit={handleSubmit(onSubmit)}>
       <section className="card-surface grid gap-5 p-6 lg:grid-cols-2">
         <TextField label="Название рецепта" error={errors.title?.message} {...register('title')} />
-        <TextField label="Категория" error={errors.category?.message} {...register('category')} />
+
+        <CategoryMultiSelect
+          value={selectedCategories}
+          onChange={(v) => setValue('category', v, { shouldValidate: true })}
+          error={errors.category?.message}
+        />
+
         <div className="lg:col-span-2">
-          <TextAreaField label="Описание" error={errors.description?.message} {...register('description')} />
+          <TextAreaField
+            label="Описание (необязательно)"
+            error={errors.description?.message}
+            {...register('description')}
+          />
         </div>
         <div className="lg:col-span-2">
-          <TextField label="URL изображения" error={errors.imageUrl?.message} {...register('imageUrl')} />
+          <TextField
+            label="URL изображения (необязательно)"
+            error={errors.imageUrl?.message}
+            {...register('imageUrl')}
+          />
         </div>
         <TextField label="Время приготовления, мин" type="number" error={errors.cookingTime?.message} {...register('cookingTime')} />
         <TextField label="Выход блюда, г" type="number" error={errors.baseWeight?.message} {...register('baseWeight')} />
@@ -93,49 +200,113 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
 
       <section className="card-surface p-6">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="section-title">Шаги приготовления</h2>
-          <Button type="button" variant="ghost" onClick={() => stepsFieldArray.append({ value: '' })}><Plus size={16} className="mr-2" /> Добавить шаг</Button>
+          <h2 className="section-title">Шаги приготовления <span className="ml-2 text-xs font-normal text-stone-400">(необязательно)</span></h2>
+          <Button type="button" variant="ghost" onClick={() => stepsFieldArray.append({ value: '' })}>
+            <Plus size={16} className="mr-2" /> Добавить шаг
+          </Button>
         </div>
         <div className="space-y-4">
           {stepsFieldArray.fields.map((field, index) => (
             <div key={field.id} className="flex gap-3">
-              <textarea className="input-base min-h-[96px]" placeholder={`Шаг ${index + 1}`} {...register(`steps.${index}.value`)} />
-              <Button type="button" variant="ghost" onClick={() => stepsFieldArray.remove(index)} disabled={stepsFieldArray.fields.length === 1}>
+              <textarea
+                className="input-base min-h-[96px]"
+                placeholder={`Шаг ${index + 1}`}
+                {...register(`steps.${index}.value`)}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => stepsFieldArray.remove(index)}
+              >
                 <Trash2 size={16} />
               </Button>
             </div>
           ))}
-          {errors.steps?.message ? <p className="text-xs text-rose-600">{errors.steps.message}</p> : null}
+          {errors.steps?.message ? (
+            <p className="text-xs text-rose-600">{errors.steps.message}</p>
+          ) : null}
         </div>
       </section>
 
       <section className="card-surface p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="section-title">Ингредиенты</h2>
-          <Button type="button" variant="ghost" onClick={() => ingredientsFieldArray.append({ name: '', weight: 0, calories: 0, protein: 0, fat: 0, carbs: 0 })}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() =>
+              ingredientsFieldArray.append({
+                name: '',
+                weight: 0,
+                calories: 0,
+                protein: 0,
+                fat: 0,
+                carbs: 0
+              })
+            }
+          >
             <Plus size={16} className="mr-2" /> Добавить ингредиент
           </Button>
         </div>
         <div className="space-y-4">
           {ingredientsFieldArray.fields.map((field, index) => (
-            <div key={field.id} className="rounded-3xl border border-stone-200 p-4 dark:border-stone-800">
+            <div
+              key={field.id}
+              className="rounded-3xl border border-stone-200 p-4 dark:border-stone-800"
+            >
               <div className="mb-4 flex items-center justify-between">
                 <div className="text-sm font-medium">Ингредиент #{index + 1}</div>
-                <Button type="button" variant="ghost" onClick={() => ingredientsFieldArray.remove(index)} disabled={ingredientsFieldArray.fields.length === 1}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => ingredientsFieldArray.remove(index)}
+                  disabled={ingredientsFieldArray.fields.length === 1}
+                >
                   <Trash2 size={16} />
                 </Button>
               </div>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <TextField label="Название" error={errors.ingredients?.[index]?.name?.message} {...register(`ingredients.${index}.name`)} />
-                <TextField label="Граммовка" type="number" error={errors.ingredients?.[index]?.weight?.message?.toString()} {...register(`ingredients.${index}.weight`)} />
-                <TextField label="Калории" type="number" error={errors.ingredients?.[index]?.calories?.message?.toString()} {...register(`ingredients.${index}.calories`)} />
-                <TextField label="Белки" type="number" error={errors.ingredients?.[index]?.protein?.message?.toString()} {...register(`ingredients.${index}.protein`)} />
-                <TextField label="Жиры" type="number" error={errors.ingredients?.[index]?.fat?.message?.toString()} {...register(`ingredients.${index}.fat`)} />
-                <TextField label="Углеводы" type="number" error={errors.ingredients?.[index]?.carbs?.message?.toString()} {...register(`ingredients.${index}.carbs`)} />
+                <TextField
+                  label="Название"
+                  error={errors.ingredients?.[index]?.name?.message}
+                  {...register(`ingredients.${index}.name`)}
+                />
+                <TextField
+                  label="Граммовка"
+                  type="number"
+                  error={errors.ingredients?.[index]?.weight?.message?.toString()}
+                  {...register(`ingredients.${index}.weight`)}
+                />
+                <TextField
+                  label="Калории"
+                  type="number"
+                  error={errors.ingredients?.[index]?.calories?.message?.toString()}
+                  {...register(`ingredients.${index}.calories`)}
+                />
+                <TextField
+                  label="Белки"
+                  type="number"
+                  error={errors.ingredients?.[index]?.protein?.message?.toString()}
+                  {...register(`ingredients.${index}.protein`)}
+                />
+                <TextField
+                  label="Жиры"
+                  type="number"
+                  error={errors.ingredients?.[index]?.fat?.message?.toString()}
+                  {...register(`ingredients.${index}.fat`)}
+                />
+                <TextField
+                  label="Углеводы"
+                  type="number"
+                  error={errors.ingredients?.[index]?.carbs?.message?.toString()}
+                  {...register(`ingredients.${index}.carbs`)}
+                />
               </div>
             </div>
           ))}
-          {errors.ingredients?.message ? <p className="text-xs text-rose-600">{errors.ingredients.message}</p> : null}
+          {errors.ingredients?.message ? (
+            <p className="text-xs text-rose-600">{errors.ingredients.message}</p>
+          ) : null}
         </div>
       </section>
 
