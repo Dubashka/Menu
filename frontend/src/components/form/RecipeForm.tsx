@@ -19,13 +19,35 @@ const CATEGORIES = [
   'Перекус'
 ] as const;
 
+const numberField = (requiredMessage: string, minValue = 0, minMessage = `Не меньше ${minValue}`) =>
+  z.preprocess(
+    (value) => {
+      if (value === '' || value === null || value === undefined) {
+        return undefined;
+      }
+
+      if (typeof value === 'number') {
+        return Number.isNaN(value) ? undefined : value;
+      }
+
+      const normalized = Number(value);
+      return Number.isNaN(normalized) ? undefined : normalized;
+    },
+    z
+      .number({
+        required_error: requiredMessage,
+        invalid_type_error: requiredMessage
+      })
+      .min(minValue, minMessage)
+  );
+
 const ingredientSchema = z.object({
   name: z.string().min(1, 'Название обязательно'),
-  weight: z.coerce.number().min(0, 'Не меньше 0'),
-  calories: z.coerce.number().min(0, 'Не меньше 0'),
-  protein: z.coerce.number().min(0, 'Не меньше 0'),
-  fat: z.coerce.number().min(0, 'Не меньше 0'),
-  carbs: z.coerce.number().min(0, 'Не меньше 0')
+  weight: numberField('Заполните граммовку', 0, 'Не меньше 0'),
+  calories: numberField('Заполните калории', 0, 'Не меньше 0'),
+  protein: numberField('Заполните белки', 0, 'Не меньше 0'),
+  fat: numberField('Заполните жиры', 0, 'Не меньше 0'),
+  carbs: numberField('Заполните углеводы', 0, 'Не меньше 0')
 });
 
 const recipeSchema = z.object({
@@ -33,12 +55,12 @@ const recipeSchema = z.object({
   description: z.string().optional().default(''),
   imageUrl: z.string().url('Введите корректный URL').or(z.literal('')).optional().default(''),
   category: z.array(z.string()).min(1, 'Выберите хотя бы одну категорию'),
-  cookingTime: z.coerce.number().min(1, 'Минимум 1 минута'),
-  baseWeight: z.coerce.number().min(1, 'Минимум 1 грамм'),
-  caloriesPer100: z.coerce.number().min(0),
-  proteinPer100: z.coerce.number().min(0),
-  fatPer100: z.coerce.number().min(0),
-  carbsPer100: z.coerce.number().min(0),
+  cookingTime: numberField('Заполните время приготовления', 1, 'Минимум 1 минута'),
+  baseWeight: numberField('Заполните выход блюда', 1, 'Минимум 1 грамм'),
+  caloriesPer100: numberField('Заполните калории на 100 г', 0, 'Не меньше 0'),
+  proteinPer100: numberField('Заполните белки на 100 г', 0, 'Не меньше 0'),
+  fatPer100: numberField('Заполните жиры на 100 г', 0, 'Не меньше 0'),
+  carbsPer100: numberField('Заполните углеводы на 100 г', 0, 'Не меньше 0'),
   steps: z.array(z.object({ value: z.string() })).optional().default([]),
   ingredients: z.array(ingredientSchema).min(1, 'Добавьте хотя бы один ингредиент')
 });
@@ -83,10 +105,7 @@ function CategoryMultiSelect({
     }
   };
 
-  const label =
-    value.length === 0
-      ? 'Выберите категории...'
-      : value.join(', ');
+  const label = value.length === 0 ? 'Выберите категории...' : value.join(', ');
 
   return (
     <div className="flex flex-col gap-1" ref={containerRef}>
@@ -175,6 +194,7 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
             {...register('description')}
           />
         </div>
+
         <div className="lg:col-span-2">
           <TextField
             label="URL изображения (необязательно)"
@@ -182,29 +202,67 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
             {...register('imageUrl')}
           />
         </div>
-        <TextField label="Время приготовления, мин" type="number" error={errors.cookingTime?.message} {...register('cookingTime')} />
-        <TextField label="Выход блюда, г" type="number" error={errors.baseWeight?.message} {...register('baseWeight')} />
+
+        <TextField
+          label="Время приготовления, мин"
+          type="number"
+          error={errors.cookingTime?.message}
+          {...register('cookingTime')}
+        />
+
+        <TextField
+          label="Выход блюда, г"
+          type="number"
+          error={errors.baseWeight?.message}
+          {...register('baseWeight')}
+        />
       </section>
 
       <section className="card-surface p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="section-title">КБЖУ на 100 г</h2>
         </div>
+
         <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <TextField label="Калории" type="number" error={errors.caloriesPer100?.message} {...register('caloriesPer100')} />
-          <TextField label="Белки" type="number" error={errors.proteinPer100?.message} {...register('proteinPer100')} />
-          <TextField label="Жиры" type="number" error={errors.fatPer100?.message} {...register('fatPer100')} />
-          <TextField label="Углеводы" type="number" error={errors.carbsPer100?.message} {...register('carbsPer100')} />
+          <TextField
+            label="Калории"
+            type="number"
+            error={errors.caloriesPer100?.message}
+            {...register('caloriesPer100')}
+          />
+          <TextField
+            label="Белки"
+            type="number"
+            error={errors.proteinPer100?.message}
+            {...register('proteinPer100')}
+          />
+          <TextField
+            label="Жиры"
+            type="number"
+            error={errors.fatPer100?.message}
+            {...register('fatPer100')}
+          />
+          <TextField
+            label="Углеводы"
+            type="number"
+            error={errors.carbsPer100?.message}
+            {...register('carbsPer100')}
+          />
         </div>
       </section>
 
       <section className="card-surface p-6">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="section-title">Шаги приготовления <span className="ml-2 text-xs font-normal text-stone-400">(необязательно)</span></h2>
+          <h2 className="section-title">
+            Шаги приготовления{' '}
+            <span className="ml-2 text-xs font-normal text-stone-400">(необязательно)</span>
+          </h2>
+
           <Button type="button" variant="ghost" onClick={() => stepsFieldArray.append({ value: '' })}>
             <Plus size={16} className="mr-2" /> Добавить шаг
           </Button>
         </div>
+
         <div className="space-y-4">
           {stepsFieldArray.fields.map((field, index) => (
             <div key={field.id} className="flex gap-3">
@@ -213,24 +271,19 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
                 placeholder={`Шаг ${index + 1}`}
                 {...register(`steps.${index}.value`)}
               />
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => stepsFieldArray.remove(index)}
-              >
+              <Button type="button" variant="ghost" onClick={() => stepsFieldArray.remove(index)}>
                 <Trash2 size={16} />
               </Button>
             </div>
           ))}
-          {errors.steps?.message ? (
-            <p className="text-xs text-rose-600">{errors.steps.message}</p>
-          ) : null}
+          {errors.steps?.message ? <p className="text-xs text-rose-600">{errors.steps.message}</p> : null}
         </div>
       </section>
 
       <section className="card-surface p-6">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="section-title">Ингредиенты</h2>
+
           <Button
             type="button"
             variant="ghost"
@@ -248,12 +301,10 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
             <Plus size={16} className="mr-2" /> Добавить ингредиент
           </Button>
         </div>
+
         <div className="space-y-4">
           {ingredientsFieldArray.fields.map((field, index) => (
-            <div
-              key={field.id}
-              className="rounded-3xl border border-stone-200 p-4 dark:border-stone-800"
-            >
+            <div key={field.id} className="rounded-3xl border border-stone-200 p-4 dark:border-stone-800">
               <div className="mb-4 flex items-center justify-between">
                 <div className="text-sm font-medium">Ингредиент #{index + 1}</div>
                 <Button
@@ -265,6 +316,7 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
                   <Trash2 size={16} />
                 </Button>
               </div>
+
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <TextField
                   label="Название"
@@ -304,6 +356,7 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
               </div>
             </div>
           ))}
+
           {errors.ingredients?.message ? (
             <p className="text-xs text-rose-600">{errors.ingredients.message}</p>
           ) : null}
