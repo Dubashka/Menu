@@ -13,7 +13,12 @@ export const createRecipeSchema = z.object({
   title: z.string().min(1, 'Название рецепта обязательно').max(200),
   description: z.string().default(''),
   image_url: z.string().url('Укажите корректный URL изображения').or(z.literal('')).default(''),
-  category: z.string().default('Другое'),
+  category: z
+    .union([
+      z.array(z.string()).min(1, 'Выберите хотя бы одну категорию'),
+      z.string().transform((s) => [s])
+    ])
+    .default([]),
   cooking_time: z.number().int().min(1, 'Время приготовления должно быть больше 0').default(30),
   base_weight: z.number().positive('Выход блюда должен быть больше 0'),
   calories_per100: z.number().min(0).default(0),
