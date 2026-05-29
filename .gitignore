@@ -1,8 +1,8 @@
-node_modules/
-dist/
+node_modules
 .env
 .env.local
 *.log
 .DS_Store
-coverage/
-backend/data/
+backend/dist
+backend/data
+frontend/dist
