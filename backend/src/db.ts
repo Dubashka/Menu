@@ -1,49 +1,52 @@
-
-import Database from 'better-sqlite3';
 import path from 'path';
 import fs from 'fs';
+import { promises as fsPromises } from 'fs';
+import { DatabaseShape, RecipeWithIngredients } from './types';
 
-const DB_DIR = path.join(__dirname, '..', 'data');
-const DB_PATH = path.join(DB_DIR, 'menu.db');
+const DATA_DIR = path.join(__dirname, '..', 'data');
+const DB_PATH = path.join(DATA_DIR, 'recipes.json');
 
-if (!fs.existsSync(DB_DIR)) {
-  fs.mkdirSync(DB_DIR, { recursive: true });
+const emptyDb: DatabaseShape = {
+  recipes: [],
+  meta: {
+    lastRecipeId: 0,
+    lastIngredientId: 0
+  }
+};
+
+if (!fs.existsSync(DATA_DIR)) {
+  fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-export const db = new Database(DB_PATH);
+if (!fs.existsSync(DB_PATH)) {
+  fs.writeFileSync(DB_PATH, JSON.stringify(emptyDb, null, 2), 'utf-8');
+}
 
-db.pragma('journal_mode = WAL');
-db.pragma('foreign_keys = ON');
+let writeQueue = Promise.resolve();
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS recipes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    image_url TEXT NOT NULL DEFAULT '',
-    category TEXT NOT NULL DEFAULT 'Другое',
-    cooking_time INTEGER NOT NULL DEFAULT 30,
-    base_weight REAL NOT NULL DEFAULT 100,
-    calories_per100 REAL NOT NULL DEFAULT 0,
-    protein_per100 REAL NOT NULL DEFAULT 0,
-    fat_per100 REAL NOT NULL DEFAULT 0,
-    carbs_per100 REAL NOT NULL DEFAULT 0,
-    steps TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+export const getDbPath = () => DB_PATH;
+
+export const readDb = async (): Promise<DatabaseShape> => {
+  const raw = await fsPromises.readFile(DB_PATH, 'utf-8');
+  const parsed = JSON.parse(raw) as DatabaseShape;
+
+  return {
+    recipes: parsed.recipes ?? [],
+    meta: {
+      lastRecipeId: parsed.meta?.lastRecipeId ?? 0,
+      lastIngredientId: parsed.meta?.lastIngredientId ?? 0
+    }
+  };
+};
+
+export const writeDb = async (nextData: DatabaseShape): Promise<void> => {
+  writeQueue = writeQueue.then(() =>
+    fsPromises.writeFile(DB_PATH, JSON.stringify(nextData, null, 2), 'utf-8')
   );
+  return writeQueue;
+};
 
-  CREATE TABLE IF NOT EXISTS recipe_ingredients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    weight REAL NOT NULL DEFAULT 0,
-    calories REAL NOT NULL DEFAULT 0,
-    protein REAL NOT NULL DEFAULT 0,
-    fat REAL NOT NULL DEFAULT 0,
-    carbs REAL NOT NULL DEFAULT 0,
-    sort_order INTEGER NOT NULL DEFAULT 0
-  );
-`);
-
-export default db;
+export const getAllRecipes = async (): Promise<RecipeWithIngredients[]> => {
+  const db = await readDb();
+  return db.recipes;
+};

@@ -1,33 +1,40 @@
-
-export interface Recipe {
-  id: number;
-  title: string;
-  description: string;
-  image_url: string;
-  category: string;
-  cooking_time: number;
-  base_weight: number;
-  calories_per100: number;
-  protein_per100: number;
-  fat_per100: number;
-  carbs_per100: number;
-  steps: string;
-  created_at: string;
-  updated_at: string;
-}
-
 export interface RecipeIngredient {
   id: number;
-  recipe_id: number;
+  recipeId: number;
   name: string;
   weight: number;
   calories: number;
   protein: number;
   fat: number;
   carbs: number;
-  sort_order: number;
+  sortOrder: number;
+}
+
+export interface Recipe {
+  id: number;
+  title: string;
+  description: string;
+  imageUrl: string;
+  category: string;
+  cookingTime: number;
+  baseWeight: number;
+  caloriesPer100: number;
+  proteinPer100: number;
+  fatPer100: number;
+  carbsPer100: number;
+  steps: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RecipeWithIngredients extends Recipe {
   ingredients: RecipeIngredient[];
+}
+
+export interface DatabaseShape {
+  recipes: RecipeWithIngredients[];
+  meta: {
+    lastRecipeId: number;
+    lastIngredientId: number;
+  };
 }
