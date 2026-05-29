@@ -1,37 +1,44 @@
-# 🍽️ Menu — Recipe Book App
 
-Full-stack recipe management application.
+# Menu — Recipe Book App
+
+Полноценное full-stack веб-приложение для рецептов.
 
 ## Stack
-- **Frontend**: React 18 + TypeScript + Vite + Tailwind CSS v3
-- **Backend**: Node.js + Express + TypeScript
-- **Database**: SQLite (via `better-sqlite3`) — zero-config, production-ready for small/medium apps
+- Frontend: React 18 + TypeScript + Vite + Tailwind CSS
+- Backend: Node.js + Express + TypeScript
+- Database: SQLite (`better-sqlite3`)
 
-## Quick Start
+## Почему такой стек
+- React + TypeScript + Vite: быстрый DX, строгая типизация, удобная модульная архитектура.
+- Express: простой и надёжный REST API для MVP без лишней сложности.
+- SQLite: zero-config база для локального запуска и демо; структуру легко перенести на PostgreSQL позже.
+
+## Возможности
+- Просмотр всех рецептов
+- Поиск, фильтрация, сортировка
+- Детальная страница рецепта
+- Мгновенный пересчёт ингредиентов под нужную граммовку
+- Блок пищевой ценности на 100 г и на выбранный выход
+- Создание рецепта через валидируемую форму
+- Seed-данные для демонстрации
+
+## Запуск
 
 ### Backend
 ```bash
 cd backend
 npm install
-npm run seed   # seed demo recipes
-npm run dev    # starts on :3001
+npm run seed
+npm run dev
 ```
+
+API будет на http://localhost:3001/api
 
 ### Frontend
 ```bash
 cd frontend
 npm install
-npm run dev    # starts on :5173
+npm run dev
 ```
 
-Open http://localhost:5173
-
-## API
-- `GET    /api/recipes`         — list all recipes
-- `GET    /api/recipes/:id`     — get recipe with ingredients
-- `POST   /api/recipes`         — create recipe
-- `PUT    /api/recipes/:id`     — update recipe
-- `DELETE /api/recipes/:id`     — delete recipe
-
-## Why SQLite?
-For an MVP recipe book, SQLite is ideal: zero setup, single file, full SQL, fast, and easily swappable to PostgreSQL via Knex/Prisma by changing one config line.
+Приложение будет на http://localhost:5173
