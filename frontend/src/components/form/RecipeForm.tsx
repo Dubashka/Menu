@@ -25,11 +25,9 @@ const numberField = (requiredMessage: string, minValue = 0, minMessage = `Не �
       if (value === '' || value === null || value === undefined) {
         return undefined;
       }
-
       if (typeof value === 'number') {
         return Number.isNaN(value) ? undefined : value;
       }
-
       const normalized = Number(value);
       return Number.isNaN(normalized) ? undefined : normalized;
     },
@@ -207,14 +205,14 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
           label="Время приготовления, мин"
           type="number"
           error={errors.cookingTime?.message}
-          {...register('cookingTime')}
+          {...register('cookingTime', { valueAsNumber: true })}
         />
 
         <TextField
           label="Выход блюда, г"
           type="number"
           error={errors.baseWeight?.message}
-          {...register('baseWeight')}
+          {...register('baseWeight', { valueAsNumber: true })}
         />
       </section>
 
@@ -228,25 +226,25 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
             label="Калории"
             type="number"
             error={errors.caloriesPer100?.message}
-            {...register('caloriesPer100')}
+            {...register('caloriesPer100', { valueAsNumber: true })}
           />
           <TextField
             label="Белки"
             type="number"
             error={errors.proteinPer100?.message}
-            {...register('proteinPer100')}
+            {...register('proteinPer100', { valueAsNumber: true })}
           />
           <TextField
             label="Жиры"
             type="number"
             error={errors.fatPer100?.message}
-            {...register('fatPer100')}
+            {...register('fatPer100', { valueAsNumber: true })}
           />
           <TextField
             label="Углеводы"
             type="number"
             error={errors.carbsPer100?.message}
-            {...register('carbsPer100')}
+            {...register('carbsPer100', { valueAsNumber: true })}
           />
         </div>
       </section>
@@ -327,31 +325,31 @@ export const RecipeForm = ({ onSubmit, isSubmitting }: Props) => {
                   label="Граммовка"
                   type="number"
                   error={errors.ingredients?.[index]?.weight?.message?.toString()}
-                  {...register(`ingredients.${index}.weight`)}
+                  {...register(`ingredients.${index}.weight`, { valueAsNumber: true })}
                 />
                 <TextField
                   label="Калории"
                   type="number"
                   error={errors.ingredients?.[index]?.calories?.message?.toString()}
-                  {...register(`ingredients.${index}.calories`)}
+                  {...register(`ingredients.${index}.calories`, { valueAsNumber: true })}
                 />
                 <TextField
                   label="Белки"
                   type="number"
                   error={errors.ingredients?.[index]?.protein?.message?.toString()}
-                  {...register(`ingredients.${index}.protein`)}
+                  {...register(`ingredients.${index}.protein`, { valueAsNumber: true })}
                 />
                 <TextField
                   label="Жиры"
                   type="number"
                   error={errors.ingredients?.[index]?.fat?.message?.toString()}
-                  {...register(`ingredients.${index}.fat`)}
+                  {...register(`ingredients.${index}.fat`, { valueAsNumber: true })}
                 />
                 <TextField
                   label="Углеводы"
                   type="number"
                   error={errors.ingredients?.[index]?.carbs?.message?.toString()}
-                  {...register(`ingredients.${index}.carbs`)}
+                  {...register(`ingredients.${index}.carbs`, { valueAsNumber: true })}
                 />
               </div>
             </div>
